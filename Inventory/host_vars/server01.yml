@@ -1,0 +1,2 @@
+ansible_hosts: 192.168.56.102
+ansible_users: sysadmin
