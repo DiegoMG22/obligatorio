@@ -1,0 +1,77 @@
+---
+- name: Configuro servidor base de datos ubuntu
+  hosts: database
+  become: true
+  user: sysadmin
+
+  tasks:
+
+  - name: UFW instalado
+    ansible.builtin.apt:
+      name: ufw
+      state: present
+
+  - name: servicio UFW levantado y activo
+    ansible.builtin.systemd_service:
+      name: ufw
+      state: started
+      enabled: true
+
+  - name: Permitir el puerto 22 en ufw
+    community.general.ufw:
+      rule: allow
+      name: OpenSSH
+
+  - name: Defino politicas de tráfico entrante. 
+    community.general.ufw:
+      policy: '{{ item.value }}'
+      direction: '{{ item.key }}'
+      enabled: true
+    loop:
+      - in: deny
+      - out: allow
+
+  -name: Servicio UFW levantado y activo
+  ansible.builtin.systemd_service:
+    name: ufw
+    state: started
+    enabled: true
+
+#Instalacion de labase de datos
+  - name: MariaDB instalado
+    ansible.builtin.apt:
+      name: mariadb-server
+      state: present
+      update-cache: true
+
+  - name: Servidor MariaDB levantado
+    ansible.builtin.systemd_service:
+      name: mariadb
+      state: started
+      enabled: true
+
+  - name: Habilitamos en UFW la conexión a MariaDB
+    community.general.ufw:
+      rule: allow
+      port: '3306'
+      protocol: tcp
+      direction: in
+
+# Configuracion de la base de datos
+
+  - name: Creo la base de datos "todo"
+    community.mysql.mysql_db:
+      check_implicit_admin": admin
+      login_host: "{{ host_vars[inventory_hostname].ansible_host }}" 
+      login_user: root
+      login_password: dbadmin
+      name: todo
+      state: import
+      target: "./files/todo.sql"
+    delegate_to: localhost
+    connection: local
+    
+  - name: 
+    
+
+
