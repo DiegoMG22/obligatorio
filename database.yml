@@ -24,25 +24,27 @@
 
   - name: Defino politicas de tráfico entrante. 
     community.general.ufw:
-      policy: '{{ item.value }}'
-      direction: '{{ item.key }}'
+      policy: allow
+      direction: out
       enabled: true
-    loop:
-      - in: deny
-      - out: allow
 
-  -name: Servicio UFW levantado y activo
+  - name: Defino politicas de tráfico entrante. 
+    community.general.ufw:
+      policy: deny
+      direction: in
+      enabled: true
+
+  - name: Servicio UFW levantado y activo
   ansible.builtin.systemd_service:
     name: ufw
     state: started
     enabled: true
 
-#Instalacion de labase de datos
+## Instalacion de la base de datos
   - name: MariaDB instalado
     ansible.builtin.apt:
       name: mariadb-server
       state: present
-      update-cache: true
 
   - name: Servidor MariaDB levantado
     ansible.builtin.systemd_service:
@@ -57,7 +59,7 @@
       protocol: tcp
       direction: in
 
-# Configuracion de la base de datos
+## Configuracion de la base de datos
 
   - name: Creo la base de datos "todo"
     community.mysql.mysql_db:
@@ -70,8 +72,3 @@
       target: "./files/todo.sql"
     delegate_to: localhost
     connection: local
-    
-  - name: 
-    
-
-

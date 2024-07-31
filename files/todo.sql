@@ -1,4 +1,3 @@
-DROP DATABASE IF EXISTS todo;
 CREATE DATABASE todo;
 USE todo;
 CREATE TABLE `users` (
