@@ -1,74 +1,101 @@
 ---
 - name: Configuro servidor base de datos ubuntu
   hosts: database
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+    mysql_root_password: ""  # Deja vacío si no hay contraseña
   become: true
   user: sysadmin
 
   tasks:
+    - name: UFW instalado
+      ansible.builtin.apt:
+        name: ufw
+        state: present
 
-  - name: UFW instalado
-    ansible.builtin.apt:
-      name: ufw
-      state: present
+    - name: Habilitar UFW
+      ansible.builtin.command:
+        cmd: ufw --force enable
+      become: true
 
-  - name: servicio UFW levantado y activo
-    ansible.builtin.systemd_service:
-      name: ufw
-      state: started
-      enabled: true
+    - name: Servicio UFW levantado y activo
+      ansible.builtin.systemd:
+        name: ufw
+        state: started
+        enabled: true
 
-  - name: Permitir el puerto 22 en ufw
-    community.general.ufw:
-      rule: allow
-      name: OpenSSH
+    - name: Permitir el puerto 22 en ufw
+      community.general.ufw:
+        rule: allow
+        name: OpenSSH
 
-  - name: Defino politicas de tráfico entrante. 
-    community.general.ufw:
-      policy: allow
-      direction: out
-      enabled: true
+    - name: Permitir tráfico saliente
+      community.general.ufw:
+        state: enabled
+        rule: allow
+        direction: out
 
-  - name: Defino politicas de tráfico entrante. 
-    community.general.ufw:
-      policy: deny
-      direction: in
-      enabled: true
+    - name: Denegar tráfico entrante por defecto
+      community.general.ufw:
+        state: enabled
+        rule: deny
+        direction: in
 
-  - name: Servicio UFW levantado y activo
-  ansible.builtin.systemd_service:
-    name: ufw
-    state: started
-    enabled: true
+    - name: Permitir tráfico entrante en el puerto 3306 para MariaDB
+      community.general.ufw:
+        rule: allow
+        port: '3306'
+        protocol: tcp
+        direction: in
 
-## Instalacion de la base de datos
-  - name: MariaDB instalado
-    ansible.builtin.apt:
-      name: mariadb-server
-      state: present
+    - name: Verificar estado del servicio UFW
+      ansible.builtin.systemd:
+        name: ufw
+        state: started
+        enabled: true
 
-  - name: Servidor MariaDB levantado
-    ansible.builtin.systemd_service:
-      name: mariadb
-      state: started
-      enabled: true
+    ## Instalación de la base de datos
+    - name: MariaDB instalado
+      ansible.builtin.apt:
+        name: mariadb-server
+        state: present
 
-  - name: Habilitamos en UFW la conexión a MariaDB
-    community.general.ufw:
-      rule: allow
-      port: '3306'
-      protocol: tcp
-      direction: in
+    - name: Servidor MariaDB reiniciado
+      ansible.builtin.systemd:
+        name: mariadb
+        state: restarted
+        enabled: true
 
-## Configuracion de la base de datos
+    - name: Permitir conexiones remotas para root
+      community.mysql.mysql_user:
+        name: root
+        host: "%"
+        priv: "*.*:ALL,GRANT"
+        state: present
+      become: true
 
-  - name: Creo la base de datos "todo"
-    community.mysql.mysql_db:
-      check_implicit_admin": admin
-      login_host: "{{ host_vars[inventory_hostname].ansible_host }}" 
-      login_user: root
-      login_password: dbadmin
-      name: todo
-      state: import
-      target: "./files/todo.sql"
-    delegate_to: localhost
-    connection: local
+    - name: Verificar estado del servicio MariaDB
+      ansible.builtin.systemd:
+        name: mariadb
+        state: started
+
+    ## Probar conexión a MySQL sin contraseña
+    - name: Probar conexión a MySQL
+      command: mysql -h 192.168.56.104 -u root -e "SHOW DATABASES;"
+      register: mysql_test
+      ignore_errors: yes
+
+    - debug:
+        msg: "Conexión a MySQL exitosa: {{ mysql_test.stdout }}"
+
+    ## Configuración de la base de datos
+    - name: Creo la base de datos "todo"
+      community.mysql.mysql_db:
+        check_implicit_admin: yes
+        login_host: "192.168.56.104"
+        login_user: root
+        name: todo
+        state: import
+        target: "./files/todo.sql"
+      delegate_to: localhost
+      connection: local
