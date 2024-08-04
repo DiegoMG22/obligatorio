@@ -1,14 +1,16 @@
 [centos]
-server01    ansible_host=192.168.56.102
+server1    ansible_host=192.168.56.102
 
 [ubuntu]
-server02    
-server03    ansible_host=192.168.56.20
+server2    ansible_host=192.168.56.104 
+server3    ansible_host=192.168.56.20
 
 [database]
-server02    
+server2    ansible_host=192.168.56.104
 
 [linux:children]
 centos
 ubuntu
 
+[all:vars]
+ansible_python_interpreter=/usr/bin/python3

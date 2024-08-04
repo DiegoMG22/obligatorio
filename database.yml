@@ -1,101 +1,86 @@
 ---
-- name: Configuro servidor base de datos ubuntu
+- name: Configuro servidor base de datos en ubuntu
   hosts: database
   vars:
-    ansible_python_interpreter: /usr/bin/python3
-    mysql_root_password: ""  # Deja vacío si no hay contraseña
+    ansible_python_interpreter: /usr/bin/python3 #Si no se pone esto, el playbook no toma bien la version de Python.
   become: true
   user: sysadmin
 
   tasks:
-    - name: UFW instalado
-      ansible.builtin.apt:
-        name: ufw
-        state: present
 
-    - name: Habilitar UFW
-      ansible.builtin.command:
-        cmd: ufw --force enable
-      become: true
+  - name: UFW instalado
+    ansible.builtin.apt:
+      name: ufw
+      state: present
 
-    - name: Servicio UFW levantado y activo
-      ansible.builtin.systemd:
-        name: ufw
-        state: started
-        enabled: true
+  - name: Permitir puerto 22 en ufw
+    community.general.ufw:
+      rule: allow
+      name: OpenSSH
 
-    - name: Permitir el puerto 22 en ufw
-      community.general.ufw:
-        rule: allow
-        name: OpenSSH
+  - name: Defino politicas de tráfico entrante
+    community.general.ufw:
+      policy: allow
+      direction: outgoing
+      state: enabled
 
-    - name: Permitir tráfico saliente
-      community.general.ufw:
-        state: enabled
-        rule: allow
-        direction: out
+  - name: Defino politicas de tráfico entrante
+    community.general.ufw:
+      policy: deny
+      direction: incoming
+      state: enabled
 
-    - name: Denegar tráfico entrante por defecto
-      community.general.ufw:
-        state: enabled
-        rule: deny
-        direction: in
+  - name: servicio UFW levantado y activo
+    ansible.builtin.systemd_service:
+      name: ufw
+      state: started
+      enabled: true
 
-    - name: Permitir tráfico entrante en el puerto 3306 para MariaDB
-      community.general.ufw:
-        rule: allow
-        port: '3306'
-        protocol: tcp
-        direction: in
+## Instalación de base de datos
+  - name: MariaDB instalado
+    ansible.builtin.apt:
+      name: mariadb-server
+      state: present
+      #update-cache: true
 
-    - name: Verificar estado del servicio UFW
-      ansible.builtin.systemd:
-        name: ufw
-        state: started
-        enabled: true
+  - name: Cambiar la configuracion para escuchar en todas las interfaces
+    ansible.builtin.lineinfile:
+      path: /etc/mysql/mariadb.conf.d/50-server.cnf
+      regexp: '^bind-address'
+      line: 'bind-address         = 0.0.0.0'
+    notify: Restart mariadb
 
-    ## Instalación de la base de datos
-    - name: MariaDB instalado
-      ansible.builtin.apt:
-        name: mariadb-server
-        state: present
+  - name: Servidor Mariadb levantado
+    ansible.builtin.systemd_service: 
+      name: mariadb
+      state: started
+      enabled: true
 
-    - name: Servidor MariaDB reiniciado
-      ansible.builtin.systemd:
-        name: mariadb
-        state: restarted
-        enabled: true
+  - name: Habilitamos en ufw la conexión a mariadb
+    community.general.ufw:
+      rule: allow
+      port: '3306'
+      protocol: tcp
+      direction: in
 
-    - name: Permitir conexiones remotas para root
-      community.mysql.mysql_user:
-        name: root
-        host: "%"
-        priv: "*.*:ALL,GRANT"
-        state: present
-      become: true
+##  Configuracion de la base de datos
 
-    - name: Verificar estado del servicio MariaDB
-      ansible.builtin.systemd:
-        name: mariadb
-        state: started
+  - name: Creo la base de datos todo
+    community.mysql.mysql_db:
+      check_implicit_admin: true
+      login_host: "{{ hostvars[inventory_hostname].ansible_host }}"
+      login_user: root
+      login_password: tlxadmin
+      name: todo
+      state: import
+      target: ./files/todo.sql
+      config_file: /etc/mysql/mariadb.conf.d/50-server.cnf
+    delegate_to: localhost
+    connection: local
 
-    ## Probar conexión a MySQL sin contraseña
-    - name: Probar conexión a MySQL
-      command: mysql -h 192.168.56.104 -u root -e "SHOW DATABASES;"
-      register: mysql_test
-      ignore_errors: yes
+  handlers:
 
-    - debug:
-        msg: "Conexión a MySQL exitosa: {{ mysql_test.stdout }}"
-
-    ## Configuración de la base de datos
-    - name: Creo la base de datos "todo"
-      community.mysql.mysql_db:
-        check_implicit_admin: yes
-        login_host: "192.168.56.104"
-        login_user: root
-        name: todo
-        state: import
-        target: "./files/todo.sql"
-      delegate_to: localhost
-      connection: local
+  - name: Restart mariadb
+    ansible.builtin.systemd_service: 
+      name: mariadb
+      state: restarted
