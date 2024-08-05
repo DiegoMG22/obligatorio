@@ -6,7 +6,7 @@ server2    ansible_host=192.168.56.104
 server3    ansible_host=192.168.56.20
 
 [database]
-server3    ansible_host=192.168.56.20
+server2    ansible_host=192.168.56.104
 
 [linux:children]
 centos
