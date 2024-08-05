@@ -8,7 +8,8 @@ CREATE TABLE `users` (
   `last_name` varchar(20) DEFAULT NULL,
   `username` varchar(250) DEFAULT NULL,
   `password` varchar(20) DEFAULT NULL,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `username` (`username`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `todos` (
@@ -21,6 +22,9 @@ CREATE TABLE `todos` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
-CREATE USER 'todo'@'%' IDENTIFIED BY 'prueba2024';
-GRANT ALL PRIVILEGES ON todo.* TO 'todo'@'%';
+CREATE USER IF NOT EXISTS 'todo'@'%' IDENTIFIED BY 'prueba2024';
+ALTER USER 'todo'@'%' IDENTIFIED BY 'prueba2024';
+-- GRANT ALL PRIVILEGES ON todo.* TO 'todo'@'%';
+-- GRANT ALL PRIVILEGES ON todo.* TO 'root'@'%';
+
 FLUSH PRIVILEGES;
