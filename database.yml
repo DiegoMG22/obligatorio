@@ -42,15 +42,15 @@
         name: mariadb-server
         state: present
         update_cache: true
+        
 
     - name: Cambiar la configuración bind-address a 0.0.0.0
       ansible.builtin.lineinfile:
         path: /etc/mysql/mariadb.conf.d/50-server.cnf
         regexp: '^bind-address'
         line: 'bind-address = 0.0.0.0'
-      notify: Restart mariadb
 
-    - name: Servidor MariaDB levantado
+    - name: Reinicio servicio de MariaDB
       ansible.builtin.systemd:
         name: mariadb
         state: restarted
@@ -64,9 +64,9 @@
         direction: in
 
     # Configuración de la base de datos
-    - name: Conceder todos los privilegios al usuario 'root' desde cualquier host
+    - name: Conceder todos los privilegios al usuario 'todo' desde cualquier host
       ansible.builtin.command: >
-        mysql -u root -p'tlxadmin' -e "GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' IDENTIFIED BY 'tlxadmin'; FLUSH PRIVILEGES;"
+        mysql -u root -p'tlxadmin' -e "GRANT ALL PRIVILEGES ON *.* TO 'todo'@'%' IDENTIFIED BY 'prueba2024'; FLUSH PRIVILEGES;"
 
     - name: Importar datos en la base de datos 'todo'
       community.mysql.mysql_db:
@@ -76,12 +76,6 @@
         name: todo
         state: import
         target: ./files/todo.sql
-        config_file: /etc/mysql/mariadb.conf.d/50-server.cnf
+        config_file: /etc/mysql/mariadb.conf.d/50-server.cnf #Especificar que archivo de configuracion tiene que tomar el playbook
       delegate_to: localhost
       connection: local
-
-  handlers:
-    - name: Restart mariadb
-      ansible.builtin.systemd:
-        name: mariadb
-        state: restarted

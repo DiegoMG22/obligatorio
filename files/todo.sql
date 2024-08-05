@@ -24,7 +24,4 @@ CREATE TABLE `todos` (
 
 CREATE USER IF NOT EXISTS 'todo'@'%' IDENTIFIED BY 'prueba2024';
 ALTER USER 'todo'@'%' IDENTIFIED BY 'prueba2024';
--- GRANT ALL PRIVILEGES ON todo.* TO 'todo'@'%';
--- GRANT ALL PRIVILEGES ON todo.* TO 'root'@'%';
-
 FLUSH PRIVILEGES;
