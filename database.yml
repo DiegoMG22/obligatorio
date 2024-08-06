@@ -13,13 +13,13 @@
         name: ufw
         state: present
 
-    - name: Defino politicas de tráfico entrantes (habilito todo)
+    - name: Defino politicas de tráfico entrantes (Deniego todo)
       community.general.ufw:
-        policy: allow
+        policy: deny
         direction: incoming
         state: enabled
 
-    - name: Defino politicas de tráfico salientes (habilito todo)
+    - name: Defino politicas de tráfico salientes (Habilito todo)
       community.general.ufw:
         policy: allow
         direction: outgoing
@@ -64,8 +64,8 @@
         direction: in
 
     # Configuración de la base de datos
-    - name: Creo el usuario 'todo' y le configuro la contraseña
-      ansible.builtin.command: >
+    - name: Creo el usuario 'todo' y le configuro la contraseña #El modulo community.mysql.user no funcionó bien.
+      ansible.builtin.command: > 
         mysql -u root -p'tlxadmin' -e "CREATE USER IF NOT EXISTS 'todo'@'%' IDENTIFIED BY 'prueba2024'; ALTER USER 'todo'@'%' IDENTIFIED BY 'prueba2024'; GRANT ALL PRIVILEGES ON *.* TO 'todo'@'%' IDENTIFIED BY 'prueba2024'; FLUSH PRIVILEGES;"
 
     - name: Importar datos en la base de datos 'todo'
